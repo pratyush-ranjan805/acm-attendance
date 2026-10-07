@@ -47,6 +47,45 @@ CREATE TABLE IF NOT EXISTS attendance (
   UNIQUE (team_member_id, attendance_date)
 );
 
+-- 5. ROOM MOVEMENTS TABLE (In-Out Tracking)
+CREATE TABLE IF NOT EXISTS room_movements (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  team_member_id UUID NOT NULL REFERENCES team_members(id) ON DELETE CASCADE,
+  team_id UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+  movement_date DATE NOT NULL,
+  reason TEXT NOT NULL,
+  custom_reason TEXT,
+  out_time TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  in_time TIMESTAMPTZ,
+  duration_minutes INTEGER,
+  status TEXT NOT NULL CHECK (status IN ('OUT', 'IN')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 6. CLUB MEMBERS TABLE
+CREATE TABLE IF NOT EXISTS club_members (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  register_no TEXT,
+  role TEXT NOT NULL DEFAULT 'Member',
+  department TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 7. CLUB ATTENDANCE TABLE
+CREATE TABLE IF NOT EXISTS club_attendance (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  club_member_id UUID NOT NULL REFERENCES club_members(id) ON DELETE CASCADE,
+  attendance_date DATE NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('Present', 'Absent')),
+  marked_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  marked_by TEXT,
+  UNIQUE (club_member_id, attendance_date)
+);
+
 -- ============================================================
 -- INDEXES for performance
 -- ============================================================
@@ -54,6 +93,11 @@ CREATE INDEX IF NOT EXISTS idx_attendance_date ON attendance(attendance_date);
 CREATE INDEX IF NOT EXISTS idx_attendance_member ON attendance(team_member_id);
 CREATE INDEX IF NOT EXISTS idx_members_team ON team_members(team_id);
 CREATE INDEX IF NOT EXISTS idx_teams_team_id ON teams(team_id);
+CREATE INDEX IF NOT EXISTS idx_movements_date ON room_movements(movement_date);
+CREATE INDEX IF NOT EXISTS idx_movements_member ON room_movements(team_member_id);
+CREATE INDEX IF NOT EXISTS idx_movements_status ON room_movements(status);
+CREATE INDEX IF NOT EXISTS idx_club_att_date ON club_attendance(attendance_date);
+CREATE INDEX IF NOT EXISTS idx_club_att_member ON club_attendance(club_member_id);
 
 -- ============================================================
 -- DISABLE ROW LEVEL SECURITY (Admin-only system)
@@ -62,6 +106,9 @@ ALTER TABLE admins DISABLE ROW LEVEL SECURITY;
 ALTER TABLE teams DISABLE ROW LEVEL SECURITY;
 ALTER TABLE team_members DISABLE ROW LEVEL SECURITY;
 ALTER TABLE attendance DISABLE ROW LEVEL SECURITY;
+ALTER TABLE room_movements DISABLE ROW LEVEL SECURITY;
+ALTER TABLE club_members DISABLE ROW LEVEL SECURITY;
+ALTER TABLE club_attendance DISABLE ROW LEVEL SECURITY;
 
 -- ============================================================
 -- SEED DEFAULT ADMIN

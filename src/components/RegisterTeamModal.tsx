@@ -171,8 +171,7 @@ export function RegisterTeamModal({
 
                   <div className="flex-1 min-w-[140px]">
                     <input
-                      type="email"
-                      placeholder="Email (Optional)"
+                      placeholder="Register Number (Optional)"
                       className="input !py-1.5 text-sm"
                       value={m.email}
                       onChange={(e) => updateMember(idx, "email", e.target.value)}

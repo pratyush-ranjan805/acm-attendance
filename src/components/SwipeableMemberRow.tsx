@@ -7,7 +7,7 @@ interface SwipeableMemberRowProps {
   status: Status;
   onStatusChange: (newStatus: Status) => void;
   onEdit: (member: Member) => void;
-  onDelete: (member: Member) => void;
+  onDelete?: (member: Member) => void;
 }
 
 export function SwipeableMemberRow({
@@ -253,7 +253,7 @@ export function SwipeableMemberRow({
             </p>
 
             {/* Subtle Swipe Guidance Hint */}
-            <div className="mt-1.5 flex items-center gap-1.5 text-[11px]">
+            <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[11px]">
               {!isPresent ? (
                 <span className="text-orange-400/80 font-medium flex items-center gap-1 animate-pulse">
                   Swipe right → Present
@@ -268,10 +268,10 @@ export function SwipeableMemberRow({
         </div>
 
         {/* State Badge & Action Buttons */}
-        <div className="flex items-center gap-3 shrink-0 mt-2 sm:mt-0">
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0 mt-2 sm:mt-0">
           {/* Status Display (Not a button) */}
           <div
-            className={`rounded-full px-3.5 py-1 text-xs font-bold tracking-wide transition-all ${
+            className={`rounded-full px-3 py-1 text-xs font-bold tracking-wide transition-all ${
               isPresent
                 ? "bg-green-500/20 text-green-400 border border-green-500/40 shadow-sm shadow-green-500/20"
                 : "bg-white/5 text-white/40 border border-white/10"
@@ -280,7 +280,9 @@ export function SwipeableMemberRow({
             {isPresent ? "✓ PRESENT" : "ABSENT"}
           </div>
 
-          {/* Action buttons (Edit / Delete) */}
+
+
+          {/* Action buttons (Edit) */}
           <div className="flex items-center gap-1 border-l border-white/10 pl-2">
             <button
               type="button"
@@ -292,17 +294,6 @@ export function SwipeableMemberRow({
               }}
             >
               ✎
-            </button>
-            <button
-              type="button"
-              className="action-btn btn-ghost !px-2 !py-1 text-xs text-red-400/70 hover:text-red-400"
-              aria-label={`Delete ${member.name}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(member);
-              }}
-            >
-              🗑
             </button>
           </div>
         </div>

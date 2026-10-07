@@ -22,6 +22,8 @@ const NAV = [
   ["/dashboard", "Dashboard"],
   ["/teams", "Teams"],
   ["/attendance", "Attendance"],
+  ["/movements", "Room Movement"],
+  ["/club", "Club Members"],
   ["/reports", "Reports"],
   ["/settings", "Settings"],
 ];
@@ -57,9 +59,12 @@ export function ExportButton({
 export function Shell({ children }: { children: ReactNode }) {
   const path = usePathname();
   const r = useRouter();
+  const toast = useToast();
   const [open, setOpen] = useState(false);
   const [ok, setOk] = useState(false);
   const [admin, setAdmin] = useState<{ name: string; email: string } | null>(null);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isStandalone, setIsStandalone] = useState(false);
 
   useEffect(() => {
     const t = session.token();
@@ -74,6 +79,36 @@ export function Shell({ children }: { children: ReactNode }) {
   useEffect(() => {
     setOpen(false);
   }, [path]);
+
+  useEffect(() => {
+    // Check if already running in standalone mode (PWA)
+    if (window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone) {
+      setIsStandalone(true);
+    }
+
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const choiceResult = await deferredPrompt.userChoice;
+      if (choiceResult.outcome === 'accepted') {
+        toast("App installed successfully!", true);
+      }
+      setDeferredPrompt(null);
+    } else {
+      toast("To install app: Open Chrome menu (⋮) -> 'Install App' or 'Add to Home screen'", true);
+    }
+  };
 
   if (!ok) {
     return (
@@ -109,11 +144,21 @@ export function Shell({ children }: { children: ReactNode }) {
           </Link>
         ))}
       </nav>
-      <div className="border-t border-white/10 p-4">
-        <p className="truncate text-sm font-medium">{admin?.name ?? "Admin"}</p>
-        <p className="truncate text-xs text-white/50">{admin?.email ?? "admin@siggraph.acm.org"}</p>
+      <div className="border-t border-white/10 p-4 space-y-3">
+        {!isStandalone && (
+          <button
+            onClick={handleInstallClick}
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/30 px-3 py-2 text-xs font-medium text-orange-400 transition-all"
+          >
+            📲 Install App (Chrome)
+          </button>
+        )}
+        <div>
+          <p className="truncate text-sm font-medium">{admin?.name ?? "Admin"}</p>
+          <p className="truncate text-xs text-white/50">{admin?.email ?? "admin@siggraph.acm.org"}</p>
+        </div>
         <button
-          className="btn-ghost mt-3 w-full !text-red-400 hover:!bg-red-500/10 text-xs"
+          className="btn-ghost w-full !text-red-400 hover:!bg-red-500/10 text-xs"
           onClick={() => {
             session.clear();
             r.replace("/login");
@@ -135,14 +180,24 @@ export function Shell({ children }: { children: ReactNode }) {
           <Logo size={32} />
           <span className="font-semibold">ACM SIGGRAPH</span>
         </div>
-        <button
-          className="btn-ghost"
-          aria-label="Menu"
-          aria-expanded={open}
-          onClick={() => setOpen(!open)}
-        >
-          ☰
-        </button>
+        <div className="flex items-center gap-2">
+          {!isStandalone && (
+            <button
+              onClick={handleInstallClick}
+              className="rounded-md bg-orange-500/10 border border-orange-500/30 px-2.5 py-1 text-xs font-medium text-orange-400"
+            >
+              📲 Install App
+            </button>
+          )}
+          <button
+            className="btn-ghost"
+            aria-label="Menu"
+            aria-expanded={open}
+            onClick={() => setOpen(!open)}
+          >
+            ☰
+          </button>
+        </div>
       </header>
       {open && <div className="fixed inset-0 z-40 bg-black md:hidden pt-14">{side}</div>}
       <main className="min-w-0 flex-1 p-4 md:p-8">{children}</main>

@@ -1,11 +1,76 @@
 // Single API layer. Adjust paths here if the Antigravity contract differs.
 const BASE = process.env.NEXT_PUBLIC_API_URL || "/api";
 export type Status = "Present" | "Absent";
-export type Member = { id: string; name: string; email?: string; role: "Leader" | "Member"; status?: Status | null; markedAt?: string | null };
+export type MovementStatus = "Inside" | "Outside";
+export type Member = {
+  id: string;
+  name: string;
+  email?: string;
+  role: "Leader" | "Member";
+  status?: Status | null;
+  markedAt?: string | null;
+  movementStatus?: MovementStatus | null;
+  activeMovement?: {
+    id: string;
+    reason: string;
+    outTime: string;
+  } | null;
+};
 export type Team = { teamId: string; name: string; memberCount?: number; members: Member[] };
 export type Stats = { totalTeams: number; totalMembers: number; present: number; absent: number; percentage: number };
 export type Rec = { date: string; teamId: string; teamName: string; memberId: string; memberName: string; role: string; status: Status; markedAt: string | null };
 export type Admin = { name: string; email: string };
+
+export type ClubMember = {
+  id: string;
+  name: string;
+  registerNo?: string;
+  role: string;
+  department?: string;
+  status: Status | null;
+  markedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type MovementRecord = {
+  id: string;
+  memberId: string;
+  memberName: string;
+  regNo?: string;
+  role?: string;
+  teamId: string;
+  teamName: string;
+  date: string;
+  reason: string;
+  customReason?: string | null;
+  outTime: string;
+  inTime: string | null;
+  durationMinutes: number | null;
+  status: "OUT" | "IN";
+  createdAt: string;
+};
+
+export type ActiveOutsideStudent = {
+  id: string;
+  memberId: string;
+  memberName: string;
+  regNo?: string;
+  teamId: string;
+  teamName: string;
+  reason: string;
+  customReason?: string | null;
+  outTime: string;
+  durationSoFarMinutes: number;
+};
+
+export type RoomStatus = {
+  date: string;
+  present: number;
+  inside: number;
+  outside: number;
+  outsideList: ActiveOutsideStudent[];
+};
 
 export class ApiError extends Error { constructor(public status: number, msg: string) { super(msg); } }
 export const session = {
@@ -49,6 +114,14 @@ export const api = {
   delMember: (id: string, mid: string) => raw(`/teams/${e(id)}/members/${mid}`, body("DELETE")),
   saveAttendance: (p: { teamId: string; date: string; records: { memberId: string; status: Status }[] }) => j<{ markedAt: string }>("/attendance", body("POST", p)),
   attendance: (f: { date?: string; teamId?: string; status?: string }) => j<Rec[]>(`/attendance${q(f)}`),
+  recordOut: (d: { memberId: string; reason: string; customReason?: string; date?: string }) =>
+    j<MovementRecord>("/movements/out", body("POST", d)),
+  recordIn: (memberId: string) =>
+    j<MovementRecord>("/movements/in", body("POST", { memberId })),
+  movements: (f?: { date?: string; teamId?: string; student?: string; regNo?: string; status?: string; reason?: string }) =>
+    j<MovementRecord[]>(`/movements${q(f || {})}`),
+  roomStatus: (date?: string) =>
+    j<RoomStatus>(`/movements/room-status${q({ date })}`),
   async exportXlsx(date?: string) {
     const r = await raw(`/attendance/export${q({ date })}`);
     const a = document.createElement("a"); a.href = URL.createObjectURL(await r.blob());
@@ -77,6 +150,17 @@ export const api = {
     a.download = "acm-teams-registration-template.xlsx"; a.click(); URL.revokeObjectURL(a.href);
   },
   clearTeams: () => raw("/teams/clear", body("DELETE")),
+  // Club Members
+  clubMembers: (f?: { date?: string; search?: string; role?: string }) =>
+    j<ClubMember[]>(`/club-members${q(f || {})}`),
+  addClubMember: (m: { name: string; registerNo?: string; role?: string; department?: string }) =>
+    j<ClubMember>("/club-members", body("POST", m)),
+  updateClubMember: (id: string, m: { name?: string; registerNo?: string; role?: string; department?: string }) =>
+    j<ClubMember>(`/club-members/${e(id)}`, body("PUT", m)),
+  deleteClubMember: (id: string) =>
+    raw(`/club-members/${e(id)}`, body("DELETE")),
+  saveClubAttendance: (p: { date?: string; records: { memberId: string; status: Status }[] }) =>
+    j<{ markedAt: string; count: number }>("/club-members/attendance", body("POST", p)),
 };
 export const today = () => new Date().toLocaleDateString("en-CA");
 export const shift = (d: number) => { const x = new Date(); x.setDate(x.getDate() + d); return x.toLocaleDateString("en-CA"); };

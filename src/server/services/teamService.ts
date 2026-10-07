@@ -11,6 +11,12 @@ export interface TeamMemberDto {
   status?: "Present" | "Absent" | "Not Marked" | null;
   markedAt?: string | null;
   marked_at?: string | null;
+  movementStatus?: "Inside" | "Outside" | null;
+  activeMovement?: {
+    id: string;
+    reason: string;
+    outTime: string;
+  } | null;
 }
 
 export interface TeamDto {
@@ -139,22 +145,43 @@ export async function getTeamByIdOrCode(identifier: string, date?: string): Prom
 
     // Fetch attendance for this date
     let attMap = new Map<string, { status: string; marked_at: string | null }>();
+    let movMap = new Map<string, { id: string; reason: string; out_time: string }>();
+
     if (memberIds.length > 0) {
-      const { data: attData } = await supabase
+      const attRes = await supabase
         .from("attendance")
         .select("team_member_id, status, marked_at")
         .eq("attendance_date", targetDate)
         .in("team_member_id", memberIds);
 
-      (attData || []).forEach((a: any) => {
+      (attRes.data || []).forEach((a: any) => {
         attMap.set(a.team_member_id, { status: a.status, marked_at: a.marked_at });
       });
+
+      try {
+        const movRes = await supabase
+          .from("room_movements")
+          .select("id, team_member_id, reason, out_time")
+          .eq("movement_date", targetDate)
+          .eq("status", "OUT")
+          .is("in_time", null)
+          .in("team_member_id", memberIds);
+
+        (movRes.data || []).forEach((m: any) => {
+          movMap.set(m.team_member_id, { id: m.id, reason: m.reason, out_time: m.out_time });
+        });
+      } catch {}
     }
 
     const members: TeamMemberDto[] = (team.team_members || [])
       .sort((a: any, b: any) => (a.role === "Leader" ? -1 : 1) - (b.role === "Leader" ? -1 : 1) || a.member_name.localeCompare(b.member_name))
       .map((m: any) => {
         const att = attMap.get(m.id);
+        const isPres = att?.status === "Present";
+        const mov = movMap.get(m.id);
+        const movementStatus = isPres ? (mov ? "Outside" : "Inside") : null;
+        const activeMovement = mov ? { id: mov.id, reason: mov.reason, outTime: mov.out_time } : null;
+
         return {
           id: String(m.id),
           name: String(m.member_name),
@@ -164,6 +191,8 @@ export async function getTeamByIdOrCode(identifier: string, date?: string): Prom
           status: (att ? att.status : null) as "Present" | "Absent" | null,
           markedAt: att ? att.marked_at : null,
           marked_at: att ? att.marked_at : null,
+          movementStatus,
+          activeMovement,
         };
       });
 
@@ -204,25 +233,44 @@ export async function getTeamByIdOrCode(identifier: string, date?: string): Prom
         m.email, 
         m.role, 
         a.status as attendance_status, 
-        a.marked_at
+        a.marked_at,
+        rm.id as movement_id,
+        rm.reason as movement_reason,
+        rm.out_time as movement_out_time
       FROM team_members m
       LEFT JOIN attendance a ON m.id = a.team_member_id AND a.attendance_date = ?
+      LEFT JOIN room_movements rm ON m.id = rm.team_member_id AND rm.status = 'OUT' AND rm.in_time IS NULL AND rm.movement_date = ?
       WHERE m.team_id = ?
       ORDER BY CASE WHEN m.role = 'Leader' THEN 0 ELSE 1 END, m.member_name ASC
     `,
-    args: [targetDate, tId],
+    args: [targetDate, targetDate, tId],
   });
 
-  const members: TeamMemberDto[] = membersRes.rows.map((m) => ({
-    id: String(m.id),
-    name: String(m.member_name),
-    member_name: String(m.member_name),
-    email: m.email ? String(m.email) : undefined,
-    role: (m.role === "Leader" ? "Leader" : "Member") as "Leader" | "Member",
-    status: (m.attendance_status ? String(m.attendance_status) : null) as "Present" | "Absent" | null,
-    markedAt: m.marked_at ? String(m.marked_at) : null,
-    marked_at: m.marked_at ? String(m.marked_at) : null,
-  }));
+  const members: TeamMemberDto[] = membersRes.rows.map((m) => {
+    const isPres = m.attendance_status === "Present";
+    const hasMov = !!m.movement_id;
+    const movementStatus = isPres ? (hasMov ? "Outside" : "Inside") : null;
+    const activeMovement = hasMov
+      ? {
+          id: String(m.movement_id),
+          reason: String(m.movement_reason),
+          outTime: String(m.movement_out_time),
+        }
+      : null;
+
+    return {
+      id: String(m.id),
+      name: String(m.member_name),
+      member_name: String(m.member_name),
+      email: m.email ? String(m.email) : undefined,
+      role: (m.role === "Leader" ? "Leader" : "Member") as "Leader" | "Member",
+      status: (m.attendance_status ? String(m.attendance_status) : null) as "Present" | "Absent" | null,
+      markedAt: m.marked_at ? String(m.marked_at) : null,
+      marked_at: m.marked_at ? String(m.marked_at) : null,
+      movementStatus,
+      activeMovement,
+    };
+  });
 
   return {
     id: tId,

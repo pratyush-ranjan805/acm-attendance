@@ -92,6 +92,7 @@ export default function TeamDetails() {
     }
   }
 
+
   if (loading) return <Skeleton rows={4} />;
   if (error || !t) return <ErrorBox msg={error ?? "Team not found"} retry={reload} />;
 
@@ -128,11 +129,20 @@ export default function TeamDetails() {
         </div>
       </div>
 
+      {/* Room Movement Notice */}
+      <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-xs text-white/60">
+        <span>🚪</span>
+        <span>To track student in/out room movement, use the dedicated</span>
+        <Link href="/movements" className="font-semibold text-orange-400 hover:underline">
+          Room Movement →
+        </Link>
+      </div>
+
       {/* Swipeable Member List */}
       <div className="space-y-2">
         {t.members.length === 0 && (
           <div className="card p-8 text-center text-white/60">
-            No members registered yet. Click &quot;+ Add Member&quot; below.
+            No members registered yet.
           </div>
         )}
 
@@ -146,13 +156,12 @@ export default function TeamDetails() {
               setDirty(true);
             }}
             onEdit={(mem) => setForm(mem)}
-            onDelete={(mem) => setDel(mem)}
           />
         ))}
       </div>
 
       {/* Member Form */}
-      {form ? (
+      {form && (
         <div className="card grid gap-3 p-4 md:grid-cols-4 border border-orange-500/30">
           <input
             className="input"
@@ -162,7 +171,7 @@ export default function TeamDetails() {
           />
           <input
             className="input"
-            placeholder="Email (optional)"
+            placeholder="Register Number (optional)"
             value={form.email ?? ""}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
           />
@@ -183,10 +192,6 @@ export default function TeamDetails() {
             </button>
           </div>
         </div>
-      ) : (
-        <button className="btn-ghost border border-white/10" onClick={() => setForm({ role: "Member" })}>
-          + Add Member
-        </button>
       )}
 
       {/* Bottom Sticky Save Bar */}
@@ -216,6 +221,8 @@ export default function TeamDetails() {
         onYes={confirmDel}
         onNo={() => setDel(null)}
       />
+
+
     </div>
   );
 }
