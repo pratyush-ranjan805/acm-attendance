@@ -45,19 +45,38 @@ export async function getAllTeams(search?: string): Promise<TeamDto[]> {
     const { data, error } = await query;
     if (error) throw new Error(error.message);
 
+    // Fetch active room movements for all members
+    const movMap = new Map<string, { id: string; reason: string; out_time: string }>();
+    try {
+      const movRes = await supabase
+        .from("room_movements")
+        .select("id, team_member_id, reason, out_time")
+        .eq("status", "OUT")
+        .is("in_time", null);
+
+      (movRes.data || []).forEach((m: any) => {
+        movMap.set(m.team_member_id, { id: m.id, reason: m.reason, out_time: m.out_time });
+      });
+    } catch {}
+
     return (data || []).map((t: any) => {
       const rawMembers = t.team_members || [];
       const members: TeamMemberDto[] = rawMembers
         .sort((a: any, b: any) => (a.role === "Leader" ? -1 : 1) - (b.role === "Leader" ? -1 : 1) || a.member_name.localeCompare(b.member_name))
-        .map((m: any) => ({
-          id: String(m.id),
-          name: String(m.member_name),
-          member_name: String(m.member_name),
-          email: m.email ? String(m.email) : undefined,
-          role: m.role === "Leader" ? "Leader" : "Member",
-          status: null,
-          markedAt: null,
-        }));
+        .map((m: any) => {
+          const mov = movMap.get(m.id);
+          return {
+            id: String(m.id),
+            name: String(m.member_name),
+            member_name: String(m.member_name),
+            email: m.email ? String(m.email) : undefined,
+            role: m.role === "Leader" ? "Leader" : "Member",
+            status: null,
+            markedAt: null,
+            movementStatus: mov ? "Outside" : "Inside",
+            activeMovement: mov ? { id: mov.id, reason: mov.reason, outTime: mov.out_time } : null,
+          };
+        });
 
       return {
         id: String(t.id),
@@ -90,6 +109,18 @@ export async function getAllTeams(search?: string): Promise<TeamDto[]> {
 
   const teamsRes = await db.execute({ sql, args });
 
+  // Load active movements from SQLite
+  const movMap = new Map<string, { id: string; reason: string; out_time: string }>();
+  try {
+    const movRes = await db.execute({
+      sql: `SELECT id, team_member_id, reason, out_time FROM room_movements WHERE status = 'OUT' AND in_time IS NULL`,
+      args: [],
+    });
+    for (const m of movRes.rows) {
+      movMap.set(String(m.team_member_id), { id: String(m.id), reason: String(m.reason), out_time: String(m.out_time) });
+    }
+  } catch {}
+
   const teams: TeamDto[] = [];
   for (const row of teamsRes.rows) {
     const tId = String(row.id);
@@ -98,15 +129,21 @@ export async function getAllTeams(search?: string): Promise<TeamDto[]> {
       args: [tId],
     });
 
-    const members: TeamMemberDto[] = membersRes.rows.map((m) => ({
-      id: String(m.id),
-      name: String(m.member_name),
-      member_name: String(m.member_name),
-      email: m.email ? String(m.email) : undefined,
-      role: (m.role === "Leader" ? "Leader" : "Member") as "Leader" | "Member",
-      status: null,
-      markedAt: null,
-    }));
+    const members: TeamMemberDto[] = membersRes.rows.map((m) => {
+      const memId = String(m.id);
+      const mov = movMap.get(memId);
+      return {
+        id: memId,
+        name: String(m.member_name),
+        member_name: String(m.member_name),
+        email: m.email ? String(m.email) : undefined,
+        role: (m.role === "Leader" ? "Leader" : "Member") as "Leader" | "Member",
+        status: null,
+        markedAt: null,
+        movementStatus: mov ? "Outside" : "Inside",
+        activeMovement: mov ? { id: mov.id, reason: mov.reason, outTime: mov.out_time } : null,
+      };
+    });
 
     teams.push({
       id: tId,
