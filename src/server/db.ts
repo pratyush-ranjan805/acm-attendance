@@ -61,11 +61,17 @@ export async function initDatabase(): Promise<void> {
       team_id TEXT NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
       member_name TEXT NOT NULL,
       email TEXT,
+      phone TEXT,
       role TEXT NOT NULL DEFAULT 'Member',
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
   `);
+
+  // Migrate phone column if not exists
+  try {
+    await db.execute(`ALTER TABLE team_members ADD COLUMN phone TEXT;`);
+  } catch {}
 
   await db.execute(`
     CREATE TABLE IF NOT EXISTS attendance (

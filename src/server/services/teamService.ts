@@ -7,6 +7,7 @@ export interface TeamMemberDto {
   name: string;
   member_name?: string;
   email?: string;
+  phone?: string;
   role: "Leader" | "Member";
   status?: "Present" | "Absent" | "Not Marked" | null;
   markedAt?: string | null;
@@ -70,6 +71,7 @@ export async function getAllTeams(search?: string): Promise<TeamDto[]> {
             name: String(m.member_name),
             member_name: String(m.member_name),
             email: m.email ? String(m.email) : undefined,
+            phone: m.phone ? String(m.phone) : undefined,
             role: m.role === "Leader" ? "Leader" : "Member",
             status: null,
             markedAt: null,
@@ -125,7 +127,7 @@ export async function getAllTeams(search?: string): Promise<TeamDto[]> {
   for (const row of teamsRes.rows) {
     const tId = String(row.id);
     const membersRes = await db.execute({
-      sql: `SELECT id, member_name, email, role, created_at, updated_at FROM team_members WHERE team_id = ? ORDER BY CASE WHEN role = 'Leader' THEN 0 ELSE 1 END, member_name ASC`,
+      sql: `SELECT id, member_name, email, phone, role, created_at, updated_at FROM team_members WHERE team_id = ? ORDER BY CASE WHEN role = 'Leader' THEN 0 ELSE 1 END, member_name ASC`,
       args: [tId],
     });
 
@@ -137,6 +139,7 @@ export async function getAllTeams(search?: string): Promise<TeamDto[]> {
         name: String(m.member_name),
         member_name: String(m.member_name),
         email: m.email ? String(m.email) : undefined,
+        phone: m.phone ? String(m.phone) : undefined,
         role: (m.role === "Leader" ? "Leader" : "Member") as "Leader" | "Member",
         status: null,
         markedAt: null,
@@ -224,6 +227,7 @@ export async function getTeamByIdOrCode(identifier: string, date?: string): Prom
           name: String(m.member_name),
           member_name: String(m.member_name),
           email: m.email ? String(m.email) : undefined,
+          phone: m.phone ? String(m.phone) : undefined,
           role: m.role === "Leader" ? "Leader" : "Member",
           status: (att ? att.status : null) as "Present" | "Absent" | null,
           markedAt: att ? att.marked_at : null,
@@ -268,6 +272,7 @@ export async function getTeamByIdOrCode(identifier: string, date?: string): Prom
         m.id, 
         m.member_name, 
         m.email, 
+        m.phone,
         m.role, 
         a.status as attendance_status, 
         a.marked_at,
@@ -300,6 +305,7 @@ export async function getTeamByIdOrCode(identifier: string, date?: string): Prom
       name: String(m.member_name),
       member_name: String(m.member_name),
       email: m.email ? String(m.email) : undefined,
+      phone: m.phone ? String(m.phone) : undefined,
       role: (m.role === "Leader" ? "Leader" : "Member") as "Leader" | "Member",
       status: (m.attendance_status ? String(m.attendance_status) : null) as "Present" | "Absent" | null,
       markedAt: m.marked_at ? String(m.marked_at) : null,
@@ -461,7 +467,7 @@ export async function deleteTeam(identifier: string): Promise<void> {
 
 export async function addMemberToTeam(
   teamIdentifier: string,
-  data: { name?: string; member_name?: string; email?: string; role?: string }
+  data: { name?: string; member_name?: string; email?: string; phone?: string; role?: string }
 ): Promise<TeamMemberDto> {
   const team = await getTeamByIdOrCode(teamIdentifier);
   if (!team) throw new Error("Team not found.");
@@ -471,12 +477,13 @@ export async function addMemberToTeam(
 
   const role = data.role === "Leader" ? "Leader" : "Member";
   const email = data.email ? data.email.trim() : null;
+  const phone = data.phone ? data.phone.trim() : null;
 
   const supabase = getSupabaseClient();
   if (supabase) {
     const { data: created, error } = await supabase
       .from("team_members")
-      .insert([{ team_id: team.id, member_name: memberName, email, role }])
+      .insert([{ team_id: team.id, member_name: memberName, email, phone, role }])
       .select()
       .single();
 
@@ -487,6 +494,7 @@ export async function addMemberToTeam(
       name: memberName,
       member_name: memberName,
       email: email || undefined,
+      phone: phone || undefined,
       role,
       status: null,
       markedAt: null,
@@ -501,8 +509,8 @@ export async function addMemberToTeam(
   const now = new Date().toISOString();
 
   await db.execute({
-    sql: `INSERT INTO team_members (id, team_id, member_name, email, role, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    args: [id, team.id, memberName, email, role, now, now],
+    sql: `INSERT INTO team_members (id, team_id, member_name, email, phone, role, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    args: [id, team.id, memberName, email, phone, role, now, now],
   });
 
   return {
@@ -510,6 +518,7 @@ export async function addMemberToTeam(
     name: memberName,
     member_name: memberName,
     email: email || undefined,
+    phone: phone || undefined,
     role,
     status: null,
     markedAt: null,
@@ -518,7 +527,7 @@ export async function addMemberToTeam(
 
 export async function updateTeamMember(
   memberId: string,
-  data: { name?: string; member_name?: string; email?: string; role?: string }
+  data: { name?: string; member_name?: string; email?: string; phone?: string; role?: string }
 ): Promise<TeamMemberDto> {
   const supabase = getSupabaseClient();
 
@@ -526,6 +535,7 @@ export async function updateTeamMember(
     const updateObj: any = { updated_at: new Date().toISOString() };
     if (data.member_name || data.name) updateObj.member_name = (data.member_name || data.name)?.trim();
     if (data.email !== undefined) updateObj.email = data.email ? data.email.trim() : null;
+    if (data.phone !== undefined) updateObj.phone = data.phone ? data.phone.trim() : null;
     if (data.role) updateObj.role = data.role === "Leader" ? "Leader" : "Member";
 
     const { data: updated, error } = await supabase
@@ -542,6 +552,7 @@ export async function updateTeamMember(
       name: String(updated.member_name),
       member_name: String(updated.member_name),
       email: updated.email ? String(updated.email) : undefined,
+      phone: updated.phone ? String(updated.phone) : undefined,
       role: updated.role as "Leader" | "Member",
       status: null,
       markedAt: null,
@@ -553,7 +564,7 @@ export async function updateTeamMember(
   const db = getDb();
 
   const memberRes = await db.execute({
-    sql: `SELECT id, team_id, member_name, email, role FROM team_members WHERE id = ? LIMIT 1`,
+    sql: `SELECT id, team_id, member_name, email, phone, role FROM team_members WHERE id = ? LIMIT 1`,
     args: [memberId],
   });
 
@@ -565,11 +576,12 @@ export async function updateTeamMember(
   const newName = (data.member_name || data.name || String(existing.member_name)).trim();
   const newRole = data.role ? (data.role === "Leader" ? "Leader" : "Member") : String(existing.role);
   const newEmail = data.email !== undefined ? (data.email ? data.email.trim() : null) : (existing.email ? String(existing.email) : null);
+  const newPhone = data.phone !== undefined ? (data.phone ? data.phone.trim() : null) : (existing.phone ? String(existing.phone) : null);
   const now = new Date().toISOString();
 
   await db.execute({
-    sql: `UPDATE team_members SET member_name = ?, email = ?, role = ?, updated_at = ? WHERE id = ?`,
-    args: [newName, newEmail, newRole, now, memberId],
+    sql: `UPDATE team_members SET member_name = ?, email = ?, phone = ?, role = ?, updated_at = ? WHERE id = ?`,
+    args: [newName, newEmail, newPhone, newRole, now, memberId],
   });
 
   return {
@@ -577,6 +589,7 @@ export async function updateTeamMember(
     name: newName,
     member_name: newName,
     email: newEmail || undefined,
+    phone: newPhone || undefined,
     role: newRole as "Leader" | "Member",
     status: null,
     markedAt: null,

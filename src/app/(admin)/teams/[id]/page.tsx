@@ -138,11 +138,65 @@ export default function TeamDetails() {
         </Link>
       </div>
 
+      {/* Header for members section with Add Member button */}
+      <div className="flex items-center justify-between pt-2">
+        <h3 className="text-base font-bold text-white">Team Members</h3>
+        {!form && (
+          <button
+            type="button"
+            className="btn !bg-white/10 hover:!bg-white/20 !px-3 !py-1 text-xs font-semibold text-white/90 border border-white/15"
+            onClick={() => setForm({ name: "", email: "", phone: "", role: "Member" })}
+          >
+            + Add Member
+          </button>
+        )}
+      </div>
+
+      {/* Member Form */}
+      {form && (
+        <div className="card grid gap-3 p-4 md:grid-cols-5 border border-orange-500/30 animate-fadeIn">
+          <input
+            className="input"
+            placeholder="Member name *"
+            value={form.name ?? ""}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+          />
+          <input
+            className="input"
+            placeholder="Phone (e.g. +91 9876543210)"
+            value={form.phone ?? ""}
+            onChange={(e) => setForm({ ...form, phone: e.target.value })}
+          />
+          <input
+            className="input"
+            placeholder="Register No / Email"
+            value={form.email ?? ""}
+            onChange={(e) => setForm({ ...form, email: e.target.value })}
+          />
+          <select
+            className="input"
+            value={form.role ?? "Member"}
+            onChange={(e) => setForm({ ...form, role: e.target.value as Member["role"] })}
+          >
+            <option value="Member">Member</option>
+            <option value="Leader">Leader</option>
+          </select>
+          <div className="flex gap-2">
+            <button className="btn !bg-orange-500 hover:!bg-orange-600 flex-1" onClick={saveMember}>
+              Save
+            </button>
+            <button className="btn-ghost" onClick={() => setForm(null)}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Swipeable Member List */}
       <div className="space-y-2">
         {t.members.length === 0 && (
           <div className="card p-8 text-center text-white/60">
-            No members registered yet.
+            No members registered yet. Click &apos;+ Add Member&apos; above.
           </div>
         )}
 
@@ -159,40 +213,6 @@ export default function TeamDetails() {
           />
         ))}
       </div>
-
-      {/* Member Form */}
-      {form && (
-        <div className="card grid gap-3 p-4 md:grid-cols-4 border border-orange-500/30">
-          <input
-            className="input"
-            placeholder="Member name"
-            value={form.name ?? ""}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-          />
-          <input
-            className="input"
-            placeholder="Register Number (optional)"
-            value={form.email ?? ""}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
-          />
-          <select
-            className="input"
-            value={form.role ?? "Member"}
-            onChange={(e) => setForm({ ...form, role: e.target.value as Member["role"] })}
-          >
-            <option value="Member">Member</option>
-            <option value="Leader">Leader</option>
-          </select>
-          <div className="flex gap-2">
-            <button className="btn !bg-orange-500 hover:!bg-orange-600" onClick={saveMember}>
-              Save Member
-            </button>
-            <button className="btn-ghost" onClick={() => setForm(null)}>
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Bottom Sticky Save Bar */}
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-neutral-950/95 p-3 backdrop-blur md:left-64">

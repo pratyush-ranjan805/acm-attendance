@@ -108,9 +108,10 @@ export default function MovementsPage() {
           if (!q) return true;
           const matchName = m.name.toLowerCase().includes(q);
           const matchEmail = (m.email || "").toLowerCase().includes(q);
+          const matchPhone = (m.phone || "").toLowerCase().includes(q);
           const matchTeamId = t.teamId.toLowerCase().includes(q);
           const matchTeamName = t.name.toLowerCase().includes(q);
-          return matchName || matchEmail || matchTeamId || matchTeamName;
+          return matchName || matchEmail || matchPhone || matchTeamId || matchTeamName;
         });
 
         // Team matches if specific team filter matches OR matching members found
@@ -242,8 +243,11 @@ export default function MovementsPage() {
                           </span>
                         )}
                       </div>
-                      <p className="text-[11px] text-white/60 truncate">
+                      <p className="text-[11px] text-white/60 truncate flex items-center gap-1.5 mt-0.5">
                         <span className="font-mono text-orange-400">{team.teamId}</span> · {team.name}
+                        {member.phone && (
+                          <span className="text-green-400 font-mono">· 📞 {member.phone}</span>
+                        )}
                       </p>
                       <div className="mt-1 flex items-center gap-2">
                         <span className="rounded bg-red-500/20 px-2 py-0.5 text-[10px] font-bold text-red-300 border border-red-500/30">
@@ -257,14 +261,27 @@ export default function MovementsPage() {
                       </div>
                     </div>
 
-                    <button
-                      type="button"
-                      disabled={markingInId === member.id}
-                      onClick={() => handleMarkIn(member.id, member.name)}
-                      className="btn !bg-green-600 hover:!bg-green-500 !px-3 !py-1.5 text-xs font-bold text-white shadow-md shadow-green-900/30 flex items-center gap-1 shrink-0 active:scale-95 transition-all"
-                    >
-                      {markingInId === member.id ? "Marking..." : "🟢 Mark IN"}
-                    </button>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {member.phone && (
+                        <a
+                          href={`tel:${member.phone.trim()}`}
+                          className="btn !bg-green-500/20 hover:!bg-green-500/30 border border-green-500/40 !px-2.5 !py-1.5 text-xs font-semibold text-green-400 active:scale-95 transition-all shadow-sm"
+                          title={`Call ${member.name}`}
+                          aria-label={`Call ${member.name}`}
+                        >
+                          <span>📞</span>
+                          <span className="hidden sm:inline">Call</span>
+                        </a>
+                      )}
+                      <button
+                        type="button"
+                        disabled={markingInId === member.id}
+                        onClick={() => handleMarkIn(member.id, member.name)}
+                        className="btn !bg-green-600 hover:!bg-green-500 !px-3 !py-1.5 text-xs font-bold text-white shadow-md shadow-green-900/30 flex items-center gap-1 active:scale-95 transition-all"
+                      >
+                        {markingInId === member.id ? "Marking..." : "🟢 Mark IN"}
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -438,8 +455,14 @@ export default function MovementsPage() {
                                         </span>
                                       )}
                                     </div>
-                                    <p className="text-xs text-white/50 mt-0.5">
-                                      {m.email ? m.email : "No Register No / Email"}
+                                    <p className="text-xs text-white/50 mt-0.5 flex flex-wrap items-center gap-1.5">
+                                      {m.email && <span>{m.email}</span>}
+                                      {m.phone && (
+                                        <span className="text-green-400/90 font-mono">
+                                          {m.email ? "· " : ""}📞 {m.phone}
+                                        </span>
+                                      )}
+                                      {!m.email && !m.phone && <span>No Register No / Phone</span>}
                                     </p>
                                   </div>
                                 </div>
@@ -461,6 +484,19 @@ export default function MovementsPage() {
                                     <span className="inline-flex items-center gap-1 rounded bg-green-500/15 px-2.5 py-0.5 text-xs font-medium text-green-400 border border-green-500/25">
                                       🟢 Inside Room
                                     </span>
+                                  )}
+
+                                  {/* Direct Call Button */}
+                                  {m.phone && (
+                                    <a
+                                      href={`tel:${m.phone.trim()}`}
+                                      className="btn !bg-green-500/20 hover:!bg-green-500/30 border border-green-500/40 !px-2.5 !py-1.5 text-xs font-semibold text-green-400 active:scale-95 transition-all shadow-sm"
+                                      title={`Call ${m.name} (${m.phone})`}
+                                      aria-label={`Call ${m.name}`}
+                                    >
+                                      <span>📞</span>
+                                      <span className="hidden sm:inline">Call</span>
+                                    </a>
                                   )}
 
                                   {/* Mark IN / OUT Action Button */}

@@ -30,10 +30,14 @@ CREATE TABLE IF NOT EXISTS team_members (
   team_id UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
   member_name TEXT NOT NULL,
   email TEXT,
+  phone TEXT,
   role TEXT NOT NULL DEFAULT 'Member' CHECK (role IN ('Leader', 'Member')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- If you have an existing database, run this to add the phone column:
+-- ALTER TABLE team_members ADD COLUMN IF NOT EXISTS phone TEXT;
 
 -- 4. ATTENDANCE TABLE
 CREATE TABLE IF NOT EXISTS attendance (

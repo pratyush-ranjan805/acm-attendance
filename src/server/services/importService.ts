@@ -17,6 +17,7 @@ async function extractPdfText(buffer: Buffer): Promise<string> {
 export interface ParsedMember {
   name: string;
   email?: string;
+  phone?: string;
   role: "Leader" | "Member";
 }
 
@@ -124,12 +125,23 @@ function parseSpreadsheetToTeams(buffer: Buffer): ParsedTeam[] {
         normalizedRow["email"] ||
         normalizedRow["emailid"] ||
         normalizedRow["mail"] ||
+        "";
+
+      const phoneVal =
+        normalizedRow["phone"] ||
+        normalizedRow["phonenumber"] ||
+        normalizedRow["phoneno"] ||
+        normalizedRow["mobile"] ||
+        normalizedRow["mobileno"] ||
         normalizedRow["contact"] ||
+        normalizedRow["contactnumber"] ||
+        normalizedRow["whatsapp"] ||
         "";
 
       teamObj.members.push({
         name: singleMemberName,
         email: emailVal || undefined,
+        phone: phoneVal || undefined,
         role: isLeader ? "Leader" : "Member",
       });
       continue;
@@ -145,10 +157,12 @@ function parseSpreadsheetToTeams(buffer: Buffer): ParsedTeam[] {
       // Check leader
       const leaderName = normalizedRow["leadername"] || normalizedRow["teamleader"] || normalizedRow["leader"] || "";
       const leaderEmail = normalizedRow["leaderemail"] || normalizedRow["leadmail"] || "";
+      const leaderPhone = normalizedRow["leaderphone"] || normalizedRow["leadphone"] || normalizedRow["leadmobile"] || normalizedRow["leadercontact"] || "";
       if (leaderName) {
         members.push({
           name: leaderName,
           email: leaderEmail || undefined,
+          phone: leaderPhone || undefined,
           role: "Leader",
         });
       }
@@ -162,11 +176,13 @@ function parseSpreadsheetToTeams(buffer: Buffer): ParsedTeam[] {
           normalizedRow[`participant${m}`] ||
           "";
         const mEmail = normalizedRow[`member${m}email`] || normalizedRow[`email${m}`] || "";
+        const mPhone = normalizedRow[`member${m}phone`] || normalizedRow[`member${m}mobile`] || normalizedRow[`phone${m}`] || normalizedRow[`mobile${m}`] || "";
 
         if (mName && mName !== leaderName) {
           members.push({
             name: mName,
             email: mEmail || undefined,
+            phone: mPhone || undefined,
             role: members.length === 0 ? "Leader" : "Member",
           });
         }
@@ -264,6 +280,7 @@ export async function importTeamsAndMembers(teams: ParsedTeam[], clearExisting: 
           team_id: teamId,
           member_name: m.name,
           email: m.email || null,
+          phone: m.phone || null,
           role: m.role || "Member",
         });
 
@@ -316,8 +333,8 @@ export async function importTeamsAndMembers(teams: ParsedTeam[], clearExisting: 
     for (const m of t.members) {
       const mId = uuidv4();
       await db.execute({
-        sql: `INSERT INTO team_members (id, team_id, member_name, email, role, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        args: [mId, tId, m.name, m.email || null, m.role || "Member", now, now],
+        sql: `INSERT INTO team_members (id, team_id, member_name, email, phone, role, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        args: [mId, tId, m.name, m.email || null, m.phone || null, m.role || "Member", now, now],
       });
       membersCount++;
     }
@@ -341,6 +358,7 @@ export async function generateImportTemplate(): Promise<Buffer> {
     { header: "Team Name", key: "teamName", width: 26 },
     { header: "Member Name", key: "memberName", width: 24 },
     { header: "Role", key: "role", width: 14 },
+    { header: "Phone Number", key: "phone", width: 18 },
     { header: "Email", key: "email", width: 30 },
   ];
 
@@ -354,12 +372,12 @@ export async function generateImportTemplate(): Promise<Buffer> {
   headerRow.height = 24;
 
   const sampleRows = [
-    { teamId: "ACM001", teamName: "Pixel Pioneers", memberName: "Alex Morgan", role: "Leader", email: "alex.m@college.edu" },
-    { teamId: "ACM001", teamName: "Pixel Pioneers", memberName: "Jordan Lee", role: "Member", email: "jordan.l@college.edu" },
-    { teamId: "ACM001", teamName: "Pixel Pioneers", memberName: "Samira Khan", role: "Member", email: "samira.k@college.edu" },
-    { teamId: "ACM002", teamName: "Neural Ninjas", memberName: "Chris Davis", role: "Leader", email: "chris.d@college.edu" },
-    { teamId: "ACM002", teamName: "Neural Ninjas", memberName: "Taylor Swift", role: "Member", email: "taylor.s@college.edu" },
-    { teamId: "ACM002", teamName: "Neural Ninjas", memberName: "David Miller", role: "Member", email: "david.m@college.edu" },
+    { teamId: "ACM001", teamName: "Pixel Pioneers", memberName: "Alex Morgan", role: "Leader", phone: "+91 9876543210", email: "alex.m@college.edu" },
+    { teamId: "ACM001", teamName: "Pixel Pioneers", memberName: "Jordan Lee", role: "Member", phone: "+91 9876543211", email: "jordan.l@college.edu" },
+    { teamId: "ACM001", teamName: "Pixel Pioneers", memberName: "Samira Khan", role: "Member", phone: "+91 9876543212", email: "samira.k@college.edu" },
+    { teamId: "ACM002", teamName: "Neural Ninjas", memberName: "Chris Davis", role: "Leader", phone: "+91 9876543213", email: "chris.d@college.edu" },
+    { teamId: "ACM002", teamName: "Neural Ninjas", memberName: "Taylor Swift", role: "Member", phone: "+91 9876543214", email: "taylor.s@college.edu" },
+    { teamId: "ACM002", teamName: "Neural Ninjas", memberName: "David Miller", role: "Member", phone: "+91 9876543215", email: "david.m@college.edu" },
   ];
 
   for (const r of sampleRows) {

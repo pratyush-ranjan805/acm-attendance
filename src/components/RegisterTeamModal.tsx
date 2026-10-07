@@ -6,6 +6,7 @@ import { useToast } from "./ui";
 interface MemberInput {
   name: string;
   email: string;
+  phone: string;
   role: "Leader" | "Member";
 }
 
@@ -22,15 +23,15 @@ export function RegisterTeamModal({
   const [teamId, setTeamId] = useState("");
   const [teamName, setTeamName] = useState("");
   const [members, setMembers] = useState<MemberInput[]>([
-    { name: "", email: "", role: "Leader" },
-    { name: "", email: "", role: "Member" },
+    { name: "", email: "", phone: "", role: "Leader" },
+    { name: "", email: "", phone: "", role: "Member" },
   ]);
   const [saving, setSaving] = useState(false);
 
   if (!open) return null;
 
   function addMemberRow() {
-    setMembers([...members, { name: "", email: "", role: "Member" }]);
+    setMembers([...members, { name: "", email: "", phone: "", role: "Member" }]);
   }
 
   function removeMemberRow(index: number) {
@@ -70,6 +71,7 @@ export function RegisterTeamModal({
         await api.addMember(createdTeam.teamId, {
           name: m.name.trim(),
           email: m.email.trim() || undefined,
+          phone: m.phone.trim() || undefined,
           role: m.role,
         });
       }
@@ -79,8 +81,8 @@ export function RegisterTeamModal({
       setTeamId("");
       setTeamName("");
       setMembers([
-        { name: "", email: "", role: "Leader" },
-        { name: "", email: "", role: "Member" },
+        { name: "", email: "", phone: "", role: "Leader" },
+        { name: "", email: "", phone: "", role: "Member" },
       ]);
       onSuccess();
       onClose();
@@ -159,19 +161,28 @@ export function RegisterTeamModal({
                   key={idx}
                   className="flex flex-wrap items-center gap-2 rounded-lg bg-white/5 p-2.5 border border-white/5"
                 >
-                  <div className="flex-1 min-w-[140px]">
+                  <div className="flex-1 min-w-[120px]">
                     <input
                       required={idx === 0}
-                      placeholder={idx === 0 ? "Leader Full Name *" : `Member ${idx + 1} Name`}
+                      placeholder={idx === 0 ? "Leader Name *" : `Member ${idx + 1} Name`}
                       className="input !py-1.5 text-sm"
                       value={m.name}
                       onChange={(e) => updateMember(idx, "name", e.target.value)}
                     />
                   </div>
 
-                  <div className="flex-1 min-w-[140px]">
+                  <div className="flex-1 min-w-[110px]">
                     <input
-                      placeholder="Register Number (Optional)"
+                      placeholder="Phone Number"
+                      className="input !py-1.5 text-sm"
+                      value={m.phone}
+                      onChange={(e) => updateMember(idx, "phone", e.target.value)}
+                    />
+                  </div>
+
+                  <div className="flex-1 min-w-[110px]">
+                    <input
+                      placeholder="Register No (Optional)"
                       className="input !py-1.5 text-sm"
                       value={m.email}
                       onChange={(e) => updateMember(idx, "email", e.target.value)}

@@ -247,9 +247,14 @@ export function SwipeableMemberRow({
               )}
             </div>
 
-            <p className="text-xs text-white/50 mt-0.5">
-              {member.role === "Leader" ? "Team Leader" : "Team Member"}
-              {member.email ? ` · ${member.email}` : ""}
+            <p className="text-xs text-white/50 mt-0.5 flex flex-wrap items-center gap-1.5">
+              <span>{member.role === "Leader" ? "Team Leader" : "Team Member"}</span>
+              {member.email && <span>· {member.email}</span>}
+              {member.phone && (
+                <span className="text-green-400/90 font-mono flex items-center gap-1">
+                  · 📞 {member.phone}
+                </span>
+              )}
             </p>
 
             {/* Subtle Swipe Guidance Hint */}
@@ -280,7 +285,19 @@ export function SwipeableMemberRow({
             {isPresent ? "✓ PRESENT" : "ABSENT"}
           </div>
 
-
+          {/* Direct Call Button */}
+          {member.phone && (
+            <a
+              href={`tel:${member.phone.trim()}`}
+              onClick={(e) => e.stopPropagation()}
+              className="action-btn flex items-center gap-1 rounded-lg bg-green-500/20 hover:bg-green-500/30 border border-green-500/40 px-2.5 py-1 text-xs font-semibold text-green-400 transition-all active:scale-95 shadow-sm shadow-green-900/20"
+              title={`Call ${member.name} (${member.phone})`}
+              aria-label={`Call ${member.name}`}
+            >
+              <span>📞</span>
+              <span className="hidden sm:inline">Call</span>
+            </a>
+          )}
 
           {/* Action buttons (Edit) */}
           <div className="flex items-center gap-1 border-l border-white/10 pl-2">
